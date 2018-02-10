@@ -1,0 +1,268 @@
+<activity
+    android:name="ah.hathi.simpleweather.WeatherActivity"
+    android:label="@string/app_name"
+    android:screenOrientation="portrait"
+    >
+    <intent-filter>
+      <action android:name="android.intent.action.MAIN" />
+      <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+</activity>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="ah.hathi.simpleweather.WeatherActivity"
+    tools:ignore="MergeRootFrame"
+    android:background="#FF0099CC" />
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context="ah.hathi.simpleweather.WeatherActivity$PlaceholderFragment" >
+ 
+    <TextView
+        android:id="@+id/city_field"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+ 
+    <TextView
+        android:id="@+id/updated_field"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/city_field"
+        android:layout_centerHorizontal="true"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:textSize="13sp" />
+ 
+    <TextView
+        android:id="@+id/weather_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"       
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:textSize="70sp"
+        />
+ 
+    <TextView
+        android:id="@+id/current_temperature_field"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:textSize="40sp" />
+ 
+    <TextView
+        android:id="@+id/details_field"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/weather_icon"
+        android:layout_centerHorizontal="true"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        />        
+ 
+</RelativeLayout>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+ 
+    <string name="app_name">Simple Weather</string>
+    <string name="change_city">Change city</string>
+ 
+    <!-- Put your own APP ID here -->
+    <string name="open_weather_maps_app_id">11111</string>
+     
+    <string name="weather_sunny">&#xf00d;</string>
+    <string name="weather_clear_night">&#xf02e;</string>
+     
+    <string name="weather_foggy">&#xf014;</string>
+    <string name="weather_cloudy">&#xf013;</string>
+    <string name="weather_rainy">&#xf019;</string>
+    <string name="weather_snowy">&#xf01b;</string>
+    <string name="weather_thunder">&#xf01e;</string>
+    <string name="weather_drizzle">&#xf01c;</string>
+     
+    <string name="place_not_found">Sorry, no weather data found.</string>    
+     
+</resources>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="ah.hathi.simpleweather.WeatherActivity" >
+ 
+    <item
+        android:id="@+id/change_city"
+        android:orderInCategory="1"
+        android:title="@string/change_city"
+        app:showAsAction="never"/>
+ 
+</menu>
+package ah.hathi.simpleweather;
+ 
+import android.app.Activity;
+import android.content.SharedPreferences;
+ 
+public class CityPreference {
+     
+    SharedPreferences prefs;
+     
+    public CityPreference(Activity activity){
+        prefs = activity.getPreferences(Activity.MODE_PRIVATE);
+    }
+     
+    // If the user has not chosen a city yet, return
+    // Sydney as the default city
+    String getCity(){
+        return prefs.getString("city", "Sydney, AU");        
+    }
+     
+    void setCity(String city){
+        prefs.edit().putString("city", city).commit();
+    }
+     
+}
+public class WeatherFragment extends Fragment {
+    Typeface weatherFont;
+     
+    TextView cityField;
+    TextView updatedField;
+    TextView detailsField;
+    TextView currentTemperatureField;
+    TextView weatherIcon;
+     
+    Handler handler;
+ 
+    public WeatherFragment(){   
+        handler = new Handler();
+    }
+ 
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+            Bundle savedInstanceState) {
+        View rootView = inflater.inflate(R.layout.fragment_weather, container, false);
+        cityField = (TextView)rootView.findViewById(R.id.city_field);
+        updatedField = (TextView)rootView.findViewById(R.id.updated_field);
+        detailsField = (TextView)rootView.findViewById(R.id.details_field);
+        currentTemperatureField = (TextView)rootView.findViewById(R.id.current_temperature_field);
+        weatherIcon = (TextView)rootView.findViewById(R.id.weather_icon);
+         
+        weatherIcon.setTypeface(weatherFont);
+        return rootView; 
+    }
+}
+private void updateWeatherData(final String city){
+    new Thread(){
+        public void run(){
+            final JSONObject json = RemoteFetch.getJSON(getActivity(), city);
+            if(json == null){
+                handler.post(new Runnable(){
+                    public void run(){
+                        Toast.makeText(getActivity(), 
+                                getActivity().getString(R.string.place_not_found), 
+                                Toast.LENGTH_LONG).show(); 
+                    }
+                });
+            } else {
+                handler.post(new Runnable(){
+                    public void run(){
+                        renderWeather(json);
+                    }
+                });
+            }               
+        }
+    }.start();
+}
+private void renderWeather(JSONObject json){
+    try {
+        cityField.setText(json.getString("name").toUpperCase(Locale.US) + 
+                ", " + 
+                json.getJSONObject("sys").getString("country"));
+         
+        JSONObject details = json.getJSONArray("weather").getJSONObject(0);
+        JSONObject main = json.getJSONObject("main");
+        detailsField.setText(
+                details.getString("description").toUpperCase(Locale.US) +
+                "\n" + "Humidity: " + main.getString("humidity") + "%" +
+                "\n" + "Pressure: " + main.getString("pressure") + " hPa");
+         
+        currentTemperatureField.setText(
+                    String.format("%.2f", main.getDouble("temp"))+ " ℃");
+ 
+        DateFormat df = DateFormat.getDateTimeInstance();
+        String updatedOn = df.format(new Date(json.getLong("dt")*1000));
+        updatedField.setText("Last update: " + updatedOn);
+ 
+        setWeatherIcon(details.getInt("id"),
+                json.getJSONObject("sys").getLong("sunrise") * 1000,
+                json.getJSONObject("sys").getLong("sunset") * 1000);
+         
+    }catch(Exception e){
+        Log.e("SimpleWeather", "One or more fields not found in the JSON data");
+    }
+}
+private void setWeatherIcon(int actualId, long sunrise, long sunset){
+    int id = actualId / 100;
+    String icon = "";
+    if(actualId == 800){
+        long currentTime = new Date().getTime();
+        if(currentTime>=sunrise && currentTime<sunset) {
+            icon = getActivity().getString(R.string.weather_sunny);
+        } else {
+            icon = getActivity().getString(R.string.weather_clear_night);
+        }
+    } else {
+        switch(id) {
+        case 2 : icon = getActivity().getString(R.string.weather_thunder);
+                 break;         
+        case 3 : icon = getActivity().getString(R.string.weather_drizzle);
+                 break;     
+        case 7 : icon = getActivity().getString(R.string.weather_foggy);
+                 break;
+        case 8 : icon = getActivity().getString(R.string.weather_cloudy);
+                 break;
+        case 6 : icon = getActivity().getString(R.string.weather_snowy);
+                 break;
+        case 5 : icon = getActivity().getString(R.string.weather_rainy);
+                 break;
+        }
+    }
+    weatherIcon.setText(icon);
+}
+public boolean onOptionsItemSelected(MenuItem item) {
+    if(item.getItemId() == R.id.change_city){
+        showInputDialog();
+    }
+    return false;
+}
+ 
+private void showInputDialog(){
+    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    builder.setTitle("Change city");
+    final EditText input = new EditText(this);
+    input.setInputType(InputType.TYPE_CLASS_TEXT);
+    builder.setView(input);
+    builder.setPositiveButton("Go", new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            changeCity(input.getText().toString());
+        }
+    });
+    builder.show();
+}
+ 
+public void changeCity(String city){
+    WeatherFragment wf = (WeatherFragment)getSupportFragmentManager()
+                            .findFragmentById(R.id.container);
+    wf.changeCity(city);
+    new CityPreference(this).setCity(city);
+}
+
